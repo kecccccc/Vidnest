@@ -3,7 +3,7 @@ import cors from 'cors'
 import { randomBytes } from 'crypto'
 import { spawn } from 'child_process'
 import { createWriteStream, existsSync } from 'fs'
-import { mkdir, readdir, rm } from 'fs/promises'
+import { mkdir, readFile, readdir, rm } from 'fs/promises'
 import express from 'express'
 import { tmpdir } from 'os'
 import { dirname, join } from 'path'
@@ -11,6 +11,9 @@ import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const distDir = join(__dirname, '..', 'dist')
+
+const GOOGLE_SITE_VERIFICATION =
+  'GO7Ka8IQtLhFP7fKY-x_ThrRmvvHbTY0Ma9ZuqbwJBQ'
 
 const PORT = Number(process.env.PORT) || 3001
 const app = express()
@@ -253,19 +256,49 @@ app.get('/sitemap.xml', (req, res) => {
 `)
 })
 
+function ensureGoogleSiteVerification(html) {
+  if (html.includes(`content="${GOOGLE_SITE_VERIFICATION}"`)) return html
+  const tag = `<meta name="google-site-verification" content="${GOOGLE_SITE_VERIFICATION}" />`
+  return html.replace(/<head\s*>/i, `<head>\n${tag}\n`)
+}
+
+async function sendIndexHtml(res) {
+  const fp = join(distDir, 'index.html')
+  let html = await readFile(fp, 'utf8')
+  html = ensureGoogleSiteVerification(html)
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+  res.type('text/html; charset=utf-8').send(html)
+}
+
 if (existsSync(distDir)) {
+  app.get('/', async (req, res, next) => {
+    try {
+      await sendIndexHtml(res)
+    } catch (err) {
+      next(err)
+    }
+  })
+  app.get('/index.html', async (req, res, next) => {
+    try {
+      await sendIndexHtml(res)
+    } catch (err) {
+      next(err)
+    }
+  })
   app.use(
     express.static(distDir, {
-      maxAge: '1h',
-      index: 'index.html',
+      index: false,
+      maxAge: '1d',
     }),
   )
-  app.use((req, res, next) => {
+  app.use(async (req, res, next) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return next()
     if (req.path.startsWith('/api')) return next()
-    res.sendFile(join(distDir, 'index.html'), (err) => {
-      if (err) next(err)
-    })
+    try {
+      await sendIndexHtml(res)
+    } catch (err) {
+      next(err)
+    }
   })
 }
 
