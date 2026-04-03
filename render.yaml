@@ -1,0 +1,10 @@
+# Render Blueprint: https://render.com/docs/infrastructure-as-code
+services:
+  - type: web
+    name: vidnest
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health

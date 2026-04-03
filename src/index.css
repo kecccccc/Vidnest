@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --color-surface: #0c0d10;
+  --color-surface-elevated: #13141a;
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-accent: #ff4d4d;
+  --color-accent-hover: #ff6666;
+  --color-muted: #8b8f9a;
+}
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  body {
+    @apply m-0 min-h-screen bg-[var(--color-surface)] font-sans text-zinc-100;
+  }
+}
